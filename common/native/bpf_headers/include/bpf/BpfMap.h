@@ -54,21 +54,25 @@ class BpfMap {
 
   private:
     void abortOnKeyOrValueSizeMismatch() {
-        if (!mMapFd.ok()) abort();
-        if (isAtLeastKernelVersion(4, 14, 0)) {
-            if (bpfGetFdKeySize(mMapFd) != sizeof(Key)) abort();
-            if (bpfGetFdValueSize(mMapFd) != sizeof(Value)) abort();
-        }
+        if (!isOk()) abort();
     }
 
   protected:
     // flag must be within BPF_OBJ_FLAG_MASK, ie. 0, BPF_F_RDONLY, BPF_F_WRONLY
     BpfMap<Key, Value>(const char* pathname, uint32_t flags) {
         mMapFd.reset(mapRetrieve(pathname, flags));
-        abortOnKeyOrValueSizeMismatch();
     }
 
   public:
+    bool isOk() {
+        if (!mMapFd.ok()) return false;
+        if (isAtLeastKernelVersion(4, 14, 0)) {
+            if (bpfGetFdKeySize(mMapFd) != sizeof(Key)) return false;
+            if (bpfGetFdValueSize(mMapFd) != sizeof(Value)) return false;
+        }
+        return true;
+    }
+
     explicit BpfMap<Key, Value>(const char* pathname) : BpfMap<Key, Value>(pathname, 0) {}
 
 #ifdef BPF_MAP_MAKE_VISIBLE_FOR_TESTING
